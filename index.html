@@ -698,8 +698,8 @@
         points = await loadPoints();
         render();
       })();
+
       refreshIcons();
-      render();
       setTimeout(() => map.invalidateSize(), 100);
       window.addEventListener('resize', () => map.invalidateSize());
     })();
