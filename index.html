@@ -278,10 +278,38 @@
       <div class="dialog-foot"><button class="button" type="button" id="cancelDialog">Cancelar</button><button class="button button-primary" type="submit"><i data-lucide="check" aria-hidden="true"></i>Guardar punto</button></div>
     </form>
   </dialog>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <!-- PEGA EL CÓDIGO DE FIREBASE AQUÍ ABAJO -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
+    import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyBOPn3S-lGx5ZJEM1V8s4sHnZ7AFOy8WHQ",
+      authDomain: "gridmap-90b5a.firebaseapp.com",
+      projectId: "gridmap-90b5a",
+      storageBucket: "gridmap-90b5a.firebasestorage.app",
+      messagingSenderId: "418619649489",
+      appId: "1:418619649489:web:ea361e690986d8849fc4f0"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    window.db = db;
+    window.fsCollection = collection;
+    window.fsGetDocs = getDocs;
+    window.fsAddDoc = addDoc;
+    window.fsUpdateDoc = updateDoc;
+    window.fsDeleteDoc = deleteDoc;
+    window.fsDoc = doc;
+  </script>
+  <!-- FIN DEL CÓDIGO DE FIREBASE -->
 
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
   <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  
   <script>
     (() => {
       const STORAGE_KEY = 'gridmap.points.v1';
@@ -309,7 +337,7 @@
       const removePhotoButton = document.getElementById('removePhotoButton');
       const list = document.getElementById('placesList');
       const hint = document.getElementById('mapHint');
-      let points = loadPoints();
+      let points = [];
       let markers = new Map();
       let pendingLocation = null;
       let selectedColor = COLORS[0];
@@ -331,20 +359,22 @@
         welcomeScreen.hidden = false;
       });
 
-      function loadPoints() {
+            async function loadPoints() {
         try {
-          const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-          return Array.isArray(parsed) ? parsed.filter(point => Number.isFinite(point.lat) && Number.isFinite(point.lng) && typeof point.name === 'string').map(point => ({ ...point, type: POINT_TYPES.includes(point.type) ? point.type : 'poste' })) : [];
-        } catch { return []; }
+          const querySnapshot = await window.fsGetDocs(window.fsCollection(window.db, "puntos"));
+          const loaded = [];
+          querySnapshot.forEach((doc) => {
+            const data = doc.data();
+            if (Number.isFinite(data.lat) && Number.isFinite(data.lng)) {
+               loaded.push({ id: doc.id, ...data });
+            }
+          });
+          return loaded;
+        } catch (e) {
+          console.error("Error cargando puntos: ", e);
+          return [];
+        }
       }
-
-      function savePoints(nextPoints = points) {
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(nextPoints));
-          return true;
-        } catch { showToast('No se pudieron guardar los cambios en este dispositivo.'); return false; }
-      }
-
       function escapeHtml(value) {
         return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
       }
@@ -436,15 +466,20 @@
         markers.get(id)?.openPopup();
       }
 
-      function deletePoint(id) {
+            async function deletePoint(id) {
         const point = points.find(item => item.id === id);
         if (!point || !window.confirm(`¿Eliminar "${point.name}" de tu mapa?`)) return;
-        const nextPoints = points.filter(item => item.id !== id);
-        if (!savePoints(nextPoints)) return;
-        points = nextPoints;
-        if (selectedId === id) selectedId = null;
-        render();
-        showToast('Punto eliminado.');
+        
+        try {
+          await window.fsDeleteDoc(window.fsDoc(window.db, "puntos", id));
+          points = points.filter(item => item.id !== id);
+          if (selectedId === id) selectedId = null;
+          render();
+          showToast('Punto eliminado de la nube.');
+        } catch (e) {
+          console.error(e);
+          showToast("Error al eliminar. Revisa tu conexión.");
+        }
       }
 
       function beginPlacement() {
@@ -519,23 +554,40 @@
       document.getElementById('closeDialog').addEventListener('click', () => dialog.close());
       document.getElementById('cancelDialog').addEventListener('click', () => dialog.close());
       dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
-      form.addEventListener('submit', event => {
+            form.addEventListener('submit', async event => {
         event.preventDefault();
         if (!pendingLocation) return;
-        const point = { id: editingId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`), name: pointName.value.trim(), type: pointType.value, note: pointNote.value.trim(), lat: pendingLocation.lat, lng: pendingLocation.lng, color: selectedColor, photo: photoData || undefined };
+        
+        // Quitamos la foto temporalmente para que no dé error de tamaño
+        const point = { 
+          name: pointName.value.trim(), 
+          type: pointType.value, 
+          note: pointNote.value.trim(), 
+          lat: pendingLocation.lat, 
+          lng: pendingLocation.lng, 
+          color: selectedColor
+        };
+
         if (!point.name) return pointName.focus();
-        const editingIndex = points.findIndex(item => item.id === editingId);
-        const nextPoints = [...points];
-        if (editingIndex >= 0) nextPoints[editingIndex] = point;
-        else nextPoints.push(point);
-        if (!savePoints(nextPoints)) return;
-        points = nextPoints;
-        selectedId = point.id;
-        dialog.close();
-        render();
-        map.flyTo([point.lat, point.lng], Math.max(map.getZoom(), 11), { duration: .55 });
-        markers.get(point.id)?.openPopup();
-        showToast(editingIndex >= 0 ? 'Punto actualizado.' : 'Punto guardado en tu mapa.');
+
+        try {
+          if (editingId) {
+            const docRef = window.fsDoc(window.db, "puntos", editingId);
+            await window.fsUpdateDoc(docRef, point);
+          } else {
+            const docRef = await window.fsAddDoc(window.fsCollection(window.db, "puntos"), point);
+            selectedId = docRef.id;
+          }
+          
+          dialog.close();
+          points = await loadPoints();
+          render();
+          map.flyTo([point.lat, point.lng], Math.max(map.getZoom(), 11), { duration: .55 });
+          showToast(editingId ? 'Punto actualizado en la nube.' : 'Punto guardado en la nube.');
+        } catch (e) {
+          console.error(e);
+          showToast("Error al guardar en la nube.");
+        }
       });
 
       document.getElementById('searchForm').addEventListener('submit', async event => {
@@ -642,7 +694,10 @@
           image.src = objectUrl;
         });
       }
-
+      (async () => {
+        points = await loadPoints();
+        render();
+      })();
       refreshIcons();
       render();
       setTimeout(() => map.invalidateSize(), 100);
