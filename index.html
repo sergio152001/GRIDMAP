@@ -407,11 +407,20 @@
         const photo = typeof point.photo === 'string' && point.photo.startsWith('data:image/') ? `<img src="${escapeHtml(point.photo)}" alt="Foto de ${escapeHtml(point.name)}" style="display:block;width:100%;max-height:190px;margin-bottom:9px;border-radius:6px;object-fit:cover">` : '';
         const note = point.note ? `<p style="margin:8px 0 0;color:#69756d;font-size:12px;line-height:1.5">${escapeHtml(point.note)}</p>` : '';
         
-        // NUEVO: Lógica para el botón de la norma (solo si es 'poste')
+        // --- NUEVA LÓGICA PARA LAS NORMAS ---
+        const normas = {
+            'poste': 'norma_poste.pdf',
+            'camara': 'norma_camara.pdf',
+            'transformador': 'norma_transformador.pdf'
+        };
+        
         let normButton = '';
-        if (point.type === 'poste') {
-            normButton = `<a href="norma_poste.pdf" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#edf3eb; color:#245c4a; text-decoration:none; border-radius:4px; font-size:10px; font-weight:bold;">📄 Ver Norma Técnica</a>`;
+        const archivoNorma = normas[point.type]; // Busca si hay un archivo para este tipo
+        
+        if (archivoNorma) {
+            normButton = `<a href="${archivoNorma}" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#edf3eb; color:#245c4a; text-decoration:none; border-radius:4px; font-size:10px; font-weight:bold;">📄 Ver Norma Técnica</a>`;
         }
+        // -------------------------------------
 
         return `<div style="min-width:170px;max-width:250px;padding:3px 1px;font-family:'DM Sans',sans-serif">${photo}<strong style="font-size:13px;color:#1b2926">${escapeHtml(point.name)}</strong><div style="margin-top:4px;color:#59665f;font-size:11px;font-weight:700">${pointTypeLabel(point.type)}</div>${note}<div style="margin-top:8px;color:#849087;font-size:10px">${formatCoords(point.lat, point.lng)}</div>
         
@@ -439,46 +448,70 @@
         renderList();
       }
 
-      function renderList() {
+            function renderList() {
         if (!points.length) {
           list.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-lucide="map-pin-plus" aria-hidden="true"></i></div><div><strong>Tu mapa empieza aquí</strong><p>Añade un punto para guardar un lugar que quieras recordar.</p></div></div>';
           refreshIcons();
           return;
         }
-                list.innerHTML = points.map((point, index) => {
-          const hasDoc = point.type === 'poste'; // Si hay más tipos con documentos, los agregas aquí
-          const docUrl = 'norma_poste.pdf'; // El nombre de tu archivo
+        
+        // 1. GENERAMOS EL HTML DE LA LISTA
+        list.innerHTML = points.map((point, index) => {
+          // Lógica para saber qué PDF mostrar
+          const normas = {
+              'poste': 'norma_poste.pdf',
+              'camara': 'norma_camara.pdf',
+              'transformador': 'norma_transformador.pdf'
+          };
+          const docUrl = normas[point.type]; 
           
           return `
           <div class="place${point.id === selectedId ? ' active' : ''}" data-id="${escapeHtml(point.id)}" tabindex="0" role="button" aria-label="Ver ${escapeHtml(point.name)} en el mapa">
             <span class="place-dot" style="background:${point.color}">${index + 1}</span>
             <span class="place-copy"><span class="place-name">${escapeHtml(point.name)}</span><span class="place-meta">${pointTypeLabel(point.type)} · ${formatCoords(point.lat, point.lng)}${point.note ? ` · ${escapeHtml(point.note)}` : ''}</span></span>
             
-            ${hasDoc ? `<a href="${docUrl}" target="_blank" class="place-edit" title="Ver norma técnica" style="text-decoration:none;"><i data-lucide="file-text" aria-hidden="true"></i></a>` : ''}
+            ${docUrl ? `<a href="${docUrl}" target="_blank" class="place-edit" title="Ver norma técnica" style="text-decoration:none;"><i data-lucide="file-text" aria-hidden="true"></i></a>` : ''}
             
             <button class="place-edit" type="button" data-edit="${escapeHtml(point.id)}" title="Editar punto" aria-label="Editar ${escapeHtml(point.name)}"><i data-lucide="pencil" aria-hidden="true"></i></button>
             <button class="place-delete" type="button" data-delete="${escapeHtml(point.id)}" title="Eliminar punto" aria-label="Eliminar ${escapeHtml(point.name)}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
           </div>`
         }).join('');
+
+        // 2. ASIGNAMOS LOS EVENTOS (Clics, editar, borrar)
         list.querySelectorAll('.place').forEach(item => {
           const select = () => selectPoint(item.dataset.id);
-          item.addEventListener('click', event => { if (!event.target.closest('.place-open')) select(); });
-          item.addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('.place-open')) { event.preventDefault(); select(); } });
+          item.addEventListener('click', event => { 
+            // Si el clic no fue en el botón de PDF, editar o borrar, selecciona el punto
+            if (!event.target.closest('.place-open') && !event.target.closest('.place-edit') && !event.target.closest('.place-delete')) {
+                select(); 
+            }
+          });
+          item.addEventListener('keydown', event => { 
+            if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('.place-open')) { 
+                event.preventDefault(); 
+                select(); 
+            } 
+          });
         });
+        
         list.querySelectorAll('[data-edit]').forEach(button => button.addEventListener('click', event => {
           event.stopPropagation();
           const point = points.find(item => item.id === button.dataset.edit);
           if (point) openPointDialog(point, point);
         }));
+        
         list.querySelectorAll('[data-delete]').forEach(button => button.addEventListener('click', event => {
           event.stopPropagation();
           deletePoint(button.dataset.delete);
         }));
+        
+        // (Esta parte es por si en el futuro agregas el botón de Google Maps a la lista)
         list.querySelectorAll('.place-open').forEach(button => button.addEventListener('click', event => {
           event.stopPropagation();
           const point = points.find(item => item.id === button.dataset.open);
           if (point) window.open(googleMapsUrl(point.lat, point.lng), '_blank', 'noopener,noreferrer');
         }));
+        
         refreshIcons();
       }
 
