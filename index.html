@@ -403,10 +403,21 @@
         return L.divIcon({ className: '', html, iconSize: [34, 42], iconAnchor: [17, 36], popupAnchor: [0, -34] });
       }
 
-      function popupContent(point) {
+        function popupContent(point) {
         const photo = typeof point.photo === 'string' && point.photo.startsWith('data:image/') ? `<img src="${escapeHtml(point.photo)}" alt="Foto de ${escapeHtml(point.name)}" style="display:block;width:100%;max-height:190px;margin-bottom:9px;border-radius:6px;object-fit:cover">` : '';
         const note = point.note ? `<p style="margin:8px 0 0;color:#69756d;font-size:12px;line-height:1.5">${escapeHtml(point.note)}</p>` : '';
-        return `<div style="min-width:170px;max-width:250px;padding:3px 1px;font-family:'DM Sans',sans-serif">${photo}<strong style="font-size:13px;color:#1b2926">${escapeHtml(point.name)}</strong><div style="margin-top:4px;color:#59665f;font-size:11px;font-weight:700">${pointTypeLabel(point.type)}</div>${note}<div style="margin-top:8px;color:#849087;font-size:10px">${formatCoords(point.lat, point.lng)}</div><div style="display:flex;gap:12px;margin-top:9px"><a href="${googleMapsUrl(point.lat, point.lng)}" target="_blank" rel="noopener noreferrer" style="color:#245c4a;font-size:11px;font-weight:700;text-decoration:none">Google Maps ↗</a><button type="button" data-edit="${escapeHtml(point.id)}" style="padding:0;border:0;background:none;color:#59665f;font-size:11px;font-weight:700;cursor:pointer">Editar</button><button type="button" data-delete="${escapeHtml(point.id)}" style="padding:0;border:0;background:none;color:#c35d48;font-size:11px;font-weight:700;cursor:pointer">Eliminar</button></div></div>`;
+        
+        // NUEVO: Lógica para el botón de la norma (solo si es 'poste')
+        let normButton = '';
+        if (point.type === 'poste') {
+            normButton = `<a href="norma_poste.pdf" target="_blank" style="display:inline-block; margin-top:8px; padding:4px 8px; background:#edf3eb; color:#245c4a; text-decoration:none; border-radius:4px; font-size:10px; font-weight:bold;">📄 Ver Norma Técnica</a>`;
+        }
+
+        return `<div style="min-width:170px;max-width:250px;padding:3px 1px;font-family:'DM Sans',sans-serif">${photo}<strong style="font-size:13px;color:#1b2926">${escapeHtml(point.name)}</strong><div style="margin-top:4px;color:#59665f;font-size:11px;font-weight:700">${pointTypeLabel(point.type)}</div>${note}<div style="margin-top:8px;color:#849087;font-size:10px">${formatCoords(point.lat, point.lng)}</div>
+        
+        ${normButton} 
+        
+        <div style="display:flex;gap:12px;margin-top:9px"><a href="${googleMapsUrl(point.lat, point.lng)}" target="_blank" rel="noopener noreferrer" style="color:#245c4a;font-size:11px;font-weight:700;text-decoration:none">Google Maps ↗</a><button type="button" data-edit="${escapeHtml(point.id)}" style="padding:0;border:0;background:none;color:#59665f;font-size:11px;font-weight:700;cursor:pointer">Editar</button><button type="button" data-delete="${escapeHtml(point.id)}" style="padding:0;border:0;background:none;color:#c35d48;font-size:11px;font-weight:700;cursor:pointer">Eliminar</button></div></div>`;
       }
 
       function render() {
@@ -434,13 +445,21 @@
           refreshIcons();
           return;
         }
-        list.innerHTML = points.map((point, index) => `
+                list.innerHTML = points.map((point, index) => {
+          const hasDoc = point.type === 'poste'; // Si hay más tipos con documentos, los agregas aquí
+          const docUrl = 'norma_poste.pdf'; // El nombre de tu archivo
+          
+          return `
           <div class="place${point.id === selectedId ? ' active' : ''}" data-id="${escapeHtml(point.id)}" tabindex="0" role="button" aria-label="Ver ${escapeHtml(point.name)} en el mapa">
             <span class="place-dot" style="background:${point.color}">${index + 1}</span>
             <span class="place-copy"><span class="place-name">${escapeHtml(point.name)}</span><span class="place-meta">${pointTypeLabel(point.type)} · ${formatCoords(point.lat, point.lng)}${point.note ? ` · ${escapeHtml(point.note)}` : ''}</span></span>
+            
+            ${hasDoc ? `<a href="${docUrl}" target="_blank" class="place-edit" title="Ver norma técnica" style="text-decoration:none;"><i data-lucide="file-text" aria-hidden="true"></i></a>` : ''}
+            
             <button class="place-edit" type="button" data-edit="${escapeHtml(point.id)}" title="Editar punto" aria-label="Editar ${escapeHtml(point.name)}"><i data-lucide="pencil" aria-hidden="true"></i></button>
             <button class="place-delete" type="button" data-delete="${escapeHtml(point.id)}" title="Eliminar punto" aria-label="Eliminar ${escapeHtml(point.name)}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
-          </div>`).join('');
+          </div>`
+        }).join('');
         list.querySelectorAll('.place').forEach(item => {
           const select = () => selectPoint(item.dataset.id);
           item.addEventListener('click', event => { if (!event.target.closest('.place-open')) select(); });
