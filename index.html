@@ -282,28 +282,32 @@
 
   <!-- PEGA EL CÓDIGO DE FIREBASE AQUÍ ABAJO -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
-    import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-app.js";
+  import { getFirestore, collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/13.3.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyBOPn3S-lGx5ZJEM1V8s4sHnZ7AFOy8WHQ",
-      authDomain: "gridmap-90b5a.firebaseapp.com",
-      projectId: "gridmap-90b5a",
-      storageBucket: "gridmap-90b5a.firebasestorage.app",
-      messagingSenderId: "418619649489",
-      appId: "1:418619649489:web:ea361e690986d8849fc4f0"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyBOPn3S-lGx5ZJEM1V8s4sHnZ7AFOy8WHQ",
+    authDomain: "gridmap-90b5a.firebaseapp.com",
+    projectId: "gridmap-90b5a",
+    storageBucket: "gridmap-90b5a.firebasestorage.app",
+    messagingSenderId: "418619649489",
+    appId: "1:418619649489:web:ea361e690986d8849fc4f0"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
 
-    window.db = db;
-    window.fsCollection = collection;
-    window.fsGetDocs = getDocs;
-    window.fsAddDoc = addDoc;
-    window.fsUpdateDoc = updateDoc;
-    window.fsDeleteDoc = deleteDoc;
-    window.fsDoc = doc;
+  // Exponer las funciones globalmente
+  window.db = db;
+  window.fsCollection = collection;
+  window.fsGetDocs = getDocs;
+  window.fsAddDoc = addDoc;
+  window.fsUpdateDoc = updateDoc;
+  window.fsDeleteDoc = deleteDoc;
+  window.fsDoc = doc;
+
+  // Opcional: verificar en consola que se cargaron
+  console.log("Firebase listo:", !!window.fsCollection);
   </script>
   <!-- FIN DEL CÓDIGO DE FIREBASE -->
 
