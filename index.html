@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f3f5ef">
+  <title>GRIDMAP — Organización de la información</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #1b2926;
+      --muted: #78827b;
+      --paper: #f3f5ef;
+      --surface: #fff;
+      --line: #e6e9e1;
+      --green: #245c4a;
+      --green-dark: #194638;
+      --lime: #d7ed72;
+      --coral: #e6785c;
+      --shadow: 0 16px 42px rgba(27, 41, 38, .12);
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; min-width: 320px; height: 100vh; height: 100dvh; overflow: hidden; background: var(--paper); color: var(--ink); font-family: "DM Sans", sans-serif; }
+    button, input, textarea { font: inherit; }
+    button { color: inherit; }
+    .welcome-screen { display: flex; height: 100%; min-height: 0; flex-direction: column; overflow: auto; background: var(--paper); }
+    .welcome-header { display: flex; min-height: 76px; align-items: center; justify-content: space-between; padding: 0 30px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.94); }
+    .welcome-header .brand { min-width: 0; }
+    .welcome-nav-label { color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+    .welcome-main { display: grid; width: min(1100px, 100%); min-height: 0; flex: 1; grid-template-columns: minmax(0, 1fr) minmax(280px, 380px); align-items: center; gap: 80px; margin: 0 auto; padding: 54px 52px 62px; }
+    .welcome-copy { max-width: 520px; }
+    .welcome-eyebrow { display: flex; align-items: center; gap: 9px; margin: 0 0 20px; color: var(--green); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+    .welcome-eyebrow::before { width: 20px; height: 2px; background: var(--coral); content: ""; }
+    .welcome-title { margin: 0; font: 600 72px/1 "Space Grotesk", sans-serif; letter-spacing: 0; }
+    .welcome-description { margin: 15px 0 0; color: var(--green); font-size: 17px; font-weight: 600; }
+    .welcome-menu { width: 100%; }
+    .welcome-menu-label { margin: 0 0 12px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 1px; }
+    .welcome-menu-item { display: grid; width: 100%; min-height: 82px; grid-template-columns: 46px minmax(0, 1fr) 34px; align-items: center; gap: 13px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 8px; background: white; text-align: left; cursor: pointer; transition: border-color .18s, transform .18s, box-shadow .18s; }
+    .welcome-menu-item:hover { transform: translateY(-2px); border-color: #b7c9bd; box-shadow: 0 10px 24px rgba(27,41,38,.08); }
+    .welcome-menu-icon, .welcome-menu-arrow { display: grid; place-items: center; }
+    .welcome-menu-icon { width: 44px; height: 44px; border-radius: 7px; background: #edf3eb; color: var(--green); }
+    .welcome-menu-icon svg { width: 20px; height: 20px; }
+    .welcome-menu-copy { display: grid; gap: 4px; }
+    .welcome-menu-copy small { color: var(--muted); font-size: 9px; font-weight: 700; letter-spacing: .8px; }
+    .welcome-menu-copy strong { font: 600 17px "Space Grotesk", sans-serif; }
+    .welcome-menu-arrow { width: 32px; height: 32px; border-radius: 6px; color: var(--green); }
+    .welcome-menu-arrow svg { width: 17px; height: 17px; }
+    .app { display: flex; flex-direction: column; height: 100%; }
+    .topbar { z-index: 500; display: flex; align-items: center; gap: 24px; min-height: 76px; padding: 0 30px; border-bottom: 1px solid var(--line); background: rgba(255,255,255,.94); }
+    .brand { display: flex; align-items: center; gap: 11px; min-width: 205px; }
+    .brand-mark { display: grid; width: 35px; height: 35px; grid-template-columns: repeat(2, 1fr); gap: 3px; padding: 5px; border-radius: 10px; background: var(--green); transform: rotate(-5deg); }
+    .brand-mark i { display: block; border-radius: 2px; background: var(--lime); }
+    .brand-mark i:nth-child(2), .brand-mark i:nth-child(3) { opacity: .56; }
+    .brand-name { font: 700 20px/1 "Space Grotesk", sans-serif; letter-spacing: 0; }
+    .brand-name span { color: var(--green); }
+    .search { position: relative; display: flex; align-items: center; width: min(460px, 42vw); height: 42px; margin: 0 auto; border: 1px solid var(--line); border-radius: 8px; background: #f8f9f6; transition: border-color .2s, box-shadow .2s; }
+    .search:focus-within { border-color: #9ab4a8; box-shadow: 0 0 0 3px rgba(36,92,74,.08); }
+    .search svg { flex: 0 0 auto; margin-left: 13px; color: var(--muted); }
+    .search input { width: 100%; height: 100%; padding: 0 12px; border: 0; outline: 0; background: transparent; color: var(--ink); font-size: 13px; }
+    .search input::placeholder { color: #9aa39c; }
+    .search button { display: grid; width: 34px; height: 34px; flex: 0 0 auto; place-items: center; margin-right: 4px; border: 0; border-radius: 6px; background: var(--green); color: white; cursor: pointer; }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .button { display: inline-flex; min-height: 40px; align-items: center; justify-content: center; gap: 8px; padding: 0 13px; border: 1px solid var(--line); border-radius: 7px; background: white; font-size: 12px; font-weight: 700; cursor: pointer; transition: transform .18s, background .18s, border-color .18s; }
+    .button:hover { transform: translateY(-1px); border-color: #bac9c0; }
+    .button-primary { border-color: var(--green); background: var(--green); color: white; }
+    .button-primary:hover { border-color: var(--green-dark); background: var(--green-dark); }
+    .button svg, .icon-button svg { width: 16px; height: 16px; }
+    .work-area { display: grid; min-height: 0; flex: 1; grid-template-columns: 330px minmax(0, 1fr); }
+    .sidebar { z-index: 400; display: flex; min-height: 0; flex-direction: column; border-right: 1px solid var(--line); background: #fff; }
+    .side-heading { padding: 25px 22px 18px; }
+    .eyebrow { margin: 0 0 8px; color: var(--muted); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; }
+    .side-title-row { display: flex; align-items: center; justify-content: space-between; }
+    h1 { margin: 0; font: 600 21px/1.2 "Space Grotesk", sans-serif; letter-spacing: 0; }
+    .count { display: inline-grid; min-width: 25px; height: 25px; place-items: center; padding: 0 6px; border-radius: 6px; background: #edf2eb; color: var(--green); font-size: 11px; font-weight: 700; }
+    .side-tools { display: flex; gap: 8px; padding: 0 22px 17px; }
+    .side-tools .button { min-height: 35px; padding: 0 10px; font-size: 11px; }
+    .side-tools .button svg { width: 14px; height: 14px; }
+    .places-list { min-height: 0; flex: 1; overflow: auto; padding: 0 12px 16px; }
+    .empty-state { display: flex; min-height: 210px; flex-direction: column; align-items: center; justify-content: center; padding: 24px; text-align: center; }
+    .empty-icon { display: grid; width: 46px; height: 46px; place-items: center; margin-bottom: 12px; border: 1px solid var(--line); border-radius: 14px; color: var(--green); background: #f8faf5; }
+    .empty-icon svg { width: 21px; height: 21px; }
+    .empty-state strong { margin-bottom: 5px; font: 600 14px "Space Grotesk", sans-serif; }
+    .empty-state p { max-width: 210px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.55; }
+    .place { display: grid; grid-template-columns: 34px minmax(0, 1fr) 26px 26px; align-items: center; gap: 7px; padding: 11px 9px; border: 1px solid transparent; border-radius: 8px; cursor: pointer; transition: background .16s, border-color .16s; }
+    .place + .place { margin-top: 3px; }
+    .place:hover { background: #f8f9f6; }
+    .place.active { border-color: #dce8df; background: #f4f8f2; }
+    .place-dot { display: grid; width: 32px; height: 32px; place-items: center; border-radius: 8px; color: white; font-size: 11px; font-weight: 700; }
+    .place-copy { min-width: 0; }
+    .place-name { overflow: hidden; margin-bottom: 4px; font-size: 12px; font-weight: 700; text-overflow: ellipsis; white-space: nowrap; }
+    .place-meta { overflow: hidden; color: var(--muted); font-size: 10px; text-overflow: ellipsis; white-space: nowrap; }
+    .place-open, .place-edit, .place-delete { display: grid; width: 26px; height: 28px; place-items: center; border: 0; border-radius: 6px; background: transparent; color: #8a948d; cursor: pointer; }
+    .place-open:hover, .place-edit:hover { background: white; color: var(--green); }
+    .place-delete:hover { background: white; color: var(--coral); }
+    .place-open svg, .place-edit svg, .place-delete svg { width: 14px; height: 14px; }
+    .side-footer { display: flex; align-items: center; justify-content: space-between; padding: 13px 20px; border-top: 1px solid var(--line); color: var(--muted); font-size: 10px; }
+    .save-state { display: inline-flex; align-items: center; gap: 6px; }
+    .save-dot { width: 6px; height: 6px; border-radius: 50%; background: #69a17e; }
+    .map-wrap { position: relative; min-width: 0; min-height: 0; background: #e9eee8; }
+    #map { position: absolute; inset: 0; background: #e9eee8; }
+    .map-topline { position: absolute; z-index: 450; top: 16px; left: 16px; display: flex; align-items: center; gap: 7px; padding: 8px 11px; border: 1px solid rgba(255,255,255,.85); border-radius: 7px; background: rgba(255,255,255,.93); box-shadow: 0 4px 16px rgba(27,41,38,.09); color: #47564e; font-size: 10px; font-weight: 700; pointer-events: none; }
+    .live-dot { width: 7px; height: 7px; border-radius: 50%; background: #60a67a; box-shadow: 0 0 0 3px rgba(96,166,122,.16); }
+    .map-actions { position: absolute; z-index: 450; top: 16px; right: 16px; display: flex; gap: 7px; }
+    .icon-button { display: grid; width: 38px; height: 38px; place-items: center; border: 1px solid rgba(255,255,255,.8); border-radius: 7px; background: rgba(255,255,255,.95); box-shadow: 0 4px 16px rgba(27,41,38,.1); cursor: pointer; transition: transform .18s, color .18s; }
+    .icon-button:hover { transform: translateY(-1px); color: var(--green); }
+    .map-hint { position: absolute; z-index: 450; bottom: 26px; left: 50%; display: flex; align-items: center; gap: 9px; max-width: calc(100% - 32px); padding: 11px 14px; border: 1px solid rgba(255,255,255,.8); border-radius: 8px; background: rgba(255,255,255,.96); box-shadow: 0 7px 22px rgba(27,41,38,.12); color: #405048; font-size: 11px; font-weight: 600; opacity: 0; pointer-events: none; transform: translate(-50%, 8px); transition: opacity .2s, transform .2s; }
+    .map-hint.visible { opacity: 1; transform: translate(-50%, 0); }
+    .map-hint svg { width: 15px; height: 15px; color: var(--green); }
+    .leaflet-container { font-family: "DM Sans", sans-serif; }
+    .leaflet-control-zoom { overflow: hidden; border: 1px solid rgba(255,255,255,.9) !important; border-radius: 7px !important; box-shadow: 0 4px 16px rgba(27,41,38,.12) !important; }
+    .leaflet-control-zoom a { width: 32px !important; height: 32px !important; border: 0 !important; color: var(--ink) !important; line-height: 32px !important; }
+    .leaflet-control-attribution { font-size: 9px !important; }
+    .grid-marker { display: flex; width: 34px; height: 42px; align-items: flex-start; justify-content: center; filter: drop-shadow(0 3px 4px rgba(24,43,35,.23)); }
+    .grid-marker-shape { position: relative; display: grid; width: 30px; height: 30px; place-items: center; border: 2px solid white; border-radius: 50% 50% 50% 5px; color: white; font: 700 10px "DM Sans", sans-serif; transform: rotate(-45deg); }
+    .grid-marker-shape span { transform: rotate(45deg); }
+    .grid-marker.selected { transform: translateY(-4px); }
+    .grid-marker.selected .grid-marker-shape { outline: 3px solid rgba(36,92,74,.2); }
+    .toast { position: fixed; z-index: 1500; right: 20px; bottom: 20px; max-width: min(360px, calc(100vw - 40px)); padding: 12px 15px; border-radius: 7px; background: var(--ink); box-shadow: var(--shadow); color: white; font-size: 12px; opacity: 0; pointer-events: none; transform: translateY(8px); transition: .2s; }
+    .toast.show { opacity: 1; transform: translateY(0); }
+    dialog { width: min(430px, calc(100vw - 30px)); padding: 0; border: 1px solid rgba(27,41,38,.1); border-radius: 12px; background: white; box-shadow: 0 24px 80px rgba(22,35,29,.28); color: var(--ink); }
+    dialog::backdrop { background: rgba(22,35,29,.38); backdrop-filter: blur(3px); }
+    .dialog-head { display: flex; align-items: flex-start; justify-content: space-between; padding: 21px 22px 16px; border-bottom: 1px solid var(--line); }
+    .dialog-head h2 { margin: 0 0 4px; font: 600 19px "Space Grotesk", sans-serif; }
+    .dialog-head p { margin: 0; color: var(--muted); font-size: 11px; }
+    .close-button { display: grid; width: 30px; height: 30px; place-items: center; border: 0; border-radius: 6px; background: #f4f6f1; color: #607066; cursor: pointer; }
+    .close-button svg { width: 16px; height: 16px; }
+    .dialog-body { display: grid; max-height: min(58dvh, 500px); gap: 16px; overflow: auto; padding: 19px 22px 22px; }
+    .field { display: grid; gap: 7px; }
+    .field label { color: #59665f; font-size: 11px; font-weight: 700; }
+    .field input, .field select, .field textarea { width: 100%; padding: 10px 11px; border: 1px solid #dfe5dc; border-radius: 6px; outline: 0; background: #fcfdfb; color: var(--ink); font-size: 12px; }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: #87a998; box-shadow: 0 0 0 3px rgba(36,92,74,.08); }
+    .field textarea { min-height: 76px; resize: vertical; }
+    .photo-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+    .photo-actions .button { min-height: 36px; }
+    .photo-actions .button svg { width: 15px; height: 15px; }
+    .photo-status { color: var(--muted); font-size: 10px; }
+    .photo-preview { display: block; width: 100%; max-height: 190px; border: 1px solid var(--line); border-radius: 7px; background: #f3f5ef; object-fit: cover; }
+    .color-options { display: flex; gap: 9px; }
+    .color-choice { width: 25px; height: 25px; padding: 0; border: 2px solid white; border-radius: 50%; box-shadow: 0 0 0 1px #dce1d8; cursor: pointer; }
+    .color-choice[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+    .dialog-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 13px 22px; border-top: 1px solid var(--line); background: #fbfcfa; }
+    .dialog-foot .button { min-height: 37px; }
+    .toast svg { width: 15px; height: 15px; vertical-align: middle; }
+    @media (max-width: 760px) {
+      .welcome-header { min-height: 64px; padding: 0 15px; }
+      .welcome-main { grid-template-columns: minmax(0, 1fr); align-content: center; gap: 43px; padding: 34px 20px; }
+      .welcome-eyebrow { margin-bottom: 15px; }
+      .welcome-title { font-size: 54px; }
+      .welcome-description { margin-top: 12px; font-size: 15px; }
+      .welcome-menu { max-width: 440px; }
+      .topbar { min-height: 112px; flex-wrap: wrap; gap: 9px 12px; padding: 12px 15px; }
+      .brand { min-width: 0; flex: 1; }
+      .brand-mark { width: 31px; height: 31px; }
+      .brand-name { font-size: 18px; }
+      .top-actions { gap: 6px; }
+      .top-actions .button { width: 38px; min-height: 38px; padding: 0; font-size: 0; }
+      .top-actions .button svg { width: 17px; height: 17px; }
+      .search { order: 3; width: 100%; height: 39px; }
+      .work-area { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) 205px; }
+      .map-wrap { grid-row: 1; }
+      .sidebar { grid-row: 2; border-top: 1px solid var(--line); border-right: 0; }
+      .side-heading { padding: 10px 16px 6px; }
+      .eyebrow { display: none; }
+      h1 { font-size: 17px; }
+      .side-tools { position: absolute; z-index: 460; right: 14px; bottom: 216px; padding: 0; }
+      .side-tools .button { min-height: 34px; background: white; box-shadow: 0 4px 15px rgba(27,41,38,.12); }
+      .places-list { display: flex; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 0 12px 8px; }
+      .place { min-width: 205px; align-self: flex-start; }
+      .place + .place { margin-top: 0; }
+      .empty-state { min-width: 100%; min-height: 110px; flex-direction: row; gap: 12px; padding: 12px; text-align: left; }
+      .empty-icon { width: 38px; height: 38px; flex: 0 0 auto; margin: 0; }
+      .empty-state p { max-width: 220px; }
+      .side-footer { padding: 8px 15px; }
+      .map-topline { top: 11px; left: 11px; }
+      .map-actions { top: 11px; right: 11px; }
+      .map-hint { bottom: 15px; font-size: 10px; }
+      .leaflet-bottom.leaflet-left { bottom: 4px; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; transition-duration: .01ms !important; animation-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+  <main class="welcome-screen" id="welcomeScreen">
+    <header class="welcome-header">
+      <div class="brand" aria-label="GRIDMAP, inicio">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="brand-name">GRID<span>MAP</span></span>
+      </div>
+      <span class="welcome-nav-label">MENÚ PRINCIPAL</span>
+    </header>
+    <section class="welcome-main" aria-labelledby="welcomeTitle">
+      <div class="welcome-copy">
+        <p class="welcome-eyebrow">Espacio de trabajo</p>
+        <h1 class="welcome-title" id="welcomeTitle">GRIDMAP</h1>
+        <p class="welcome-description">Organización de la información</p>
+      </div>
+      <nav class="welcome-menu" aria-label="Menú principal">
+        <p class="welcome-menu-label">MENÚ PRINCIPAL</p>
+        <button class="welcome-menu-item" type="button" data-open-maps>
+          <span class="welcome-menu-icon"><i data-lucide="map" aria-hidden="true"></i></span>
+          <span class="welcome-menu-copy"><small>MÓDULO 01</small><strong>Mapas</strong></span>
+          <span class="welcome-menu-arrow"><i data-lucide="arrow-right" aria-hidden="true"></i></span>
+        </button>
+      </nav>
+    </section>
+  </main>
+  <div class="app" id="mapApp" hidden>
+    <header class="topbar">
+      <div class="brand" aria-label="GRIDMAP, inicio">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="brand-name">GRID<span>MAP</span></span>
+      </div>
+      <form class="search" id="searchForm" role="search">
+        <i data-lucide="search" aria-hidden="true"></i>
+        <input id="searchInput" type="search" placeholder="Buscar ciudad, dirección o lugar..." autocomplete="off" aria-label="Buscar lugar">
+        <button type="submit" aria-label="Buscar"><i data-lucide="arrow-right" aria-hidden="true"></i></button>
+      </form>
+      <div class="top-actions">
+        <button class="button" id="homeButton" title="Volver al inicio"><i data-lucide="house" aria-hidden="true"></i><span>Inicio</span></button>
+        <button class="button" id="exportButton" title="Exportar puntos como GeoJSON"><i data-lucide="download" aria-hidden="true"></i><span>Exportar</span></button>
+        <button class="button button-primary" id="addButton"><i data-lucide="plus" aria-hidden="true"></i><span>Añadir punto</span></button>
+      </div>
+    </header>
+    <main class="work-area">
+      <aside class="sidebar" aria-label="Puntos guardados">
+        <div class="side-heading">
+          <p class="eyebrow">Tu espacio de exploración</p>
+          <div class="side-title-row"><h1>Mis puntos</h1><span class="count" id="pointCount">0</span></div>
+        </div>
+        <div class="side-tools">
+          <button class="button" id="importButton" title="Importar archivo GeoJSON"><i data-lucide="file-up" aria-hidden="true"></i>Importar</button>
+          <input id="importInput" type="file" accept=".json,.geojson,application/geo+json,application/json" hidden>
+          <a class="button" href="https://earth.google.com/web/" target="_blank" rel="noopener noreferrer" title="Abrir Google Earth"><i data-lucide="globe-2" aria-hidden="true"></i>Google Earth</a>
+        </div>
+        <div class="places-list" id="placesList"></div>
+        <div class="side-footer"><span class="save-state"><i class="save-dot"></i>Guardado en este dispositivo</span><span id="pointPlural">0 lugares</span></div>
+      </aside>
+      <section class="map-wrap" aria-label="Mapa interactivo">
+        <div id="map" aria-label="Mapa"></div>
+        <div class="map-topline"><i class="live-dot"></i><span id="mapStatus">MAPA ACTIVO</span></div>
+        <div class="map-actions">
+          <button class="icon-button" id="googleMapsButton" title="Abrir la vista actual en Google Maps" aria-label="Abrir en Google Maps"><i data-lucide="map" aria-hidden="true"></i></button>
+          <button class="icon-button" id="locateButton" title="Ir a mi ubicación" aria-label="Ir a mi ubicación"><i data-lucide="locate-fixed" aria-hidden="true"></i></button>
+        </div>
+        <div class="map-hint" id="mapHint"><i data-lucide="mouse-pointer-2" aria-hidden="true"></i><span>Haz clic en el mapa para elegir dónde colocar el punto</span></div>
+      </section>
+    </main>
+  </div>
+
+  <dialog id="pointDialog">
+    <form id="pointForm">
+      <div class="dialog-head">
+        <div><h2 id="dialogTitle">Nuevo punto</h2><p id="coordinateLabel">Coordenadas del lugar</p></div>
+        <button class="close-button" type="button" id="closeDialog" aria-label="Cerrar"><i data-lucide="x" aria-hidden="true"></i></button>
+      </div>
+      <div class="dialog-body">
+        <div class="field"><label for="pointName">Nombre</label><input id="pointName" maxlength="60" placeholder="Ej. Mirador del norte" required></div>
+        <div class="field"><label for="pointType">Tipo de punto</label><select id="pointType" required><option value="poste">Poste</option><option value="camara">Cámara</option><option value="transformador">Transformador</option></select></div>
+        <div class="field"><label for="pointNote">Notas <span style="font-weight:400;color:#87918a">(opcional)</span></label><textarea id="pointNote" maxlength="300" placeholder="Añade un detalle para recordar este lugar..."></textarea></div>
+        <div class="field">
+          <label for="photoInput">Foto del lugar</label>
+          <input id="photoInput" type="file" accept="image/*" capture="environment" hidden>
+          <div class="photo-actions">
+            <button class="button" type="button" id="photoButton"><i data-lucide="camera" aria-hidden="true"></i><span id="photoButtonText">Tomar foto</span></button>
+            <button class="button" type="button" id="removePhotoButton" hidden><i data-lucide="trash-2" aria-hidden="true"></i><span>Quitar foto</span></button>
+            <span class="photo-status" id="photoStatus" aria-live="polite">Sin foto</span>
+          </div>
+          <img class="photo-preview" id="photoPreview" alt="Vista previa de la foto del lugar" hidden>
+        </div>
+        <div class="field"><label>Color del marcador</label><div class="color-options" id="colorOptions"></div></div>
+      </div>
+      <div class="dialog-foot"><button class="button" type="button" id="cancelDialog">Cancelar</button><button class="button button-primary" type="submit"><i data-lucide="check" aria-hidden="true"></i>Guardar punto</button></div>
+    </form>
+  </dialog>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+  <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js"></script>
+  <script>
+    (() => {
+      const STORAGE_KEY = 'gridmap.points.v1';
+      const COLORS = ['#245c4a', '#d26b4f', '#3d78a3', '#bd8b28', '#8a6bb2', '#52665a'];
+      const POINT_TYPES = ['poste', 'camara', 'transformador'];
+      const POINT_TYPE_LABELS = { poste: 'Poste', camara: 'Cámara', transformador: 'Transformador' };
+      const welcomeScreen = document.getElementById('welcomeScreen');
+      const mapApp = document.getElementById('mapApp');
+      const map = L.map('map', { zoomControl: false, preferCanvas: true }).setView([40.4168, -3.7038], 6);
+      L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
+        maxZoom: 19
+      }).addTo(map);
+      L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+      const dialog = document.getElementById('pointDialog');
+      const form = document.getElementById('pointForm');
+      const pointName = document.getElementById('pointName');
+      const pointType = document.getElementById('pointType');
+      const pointNote = document.getElementById('pointNote');
+      const photoInput = document.getElementById('photoInput');
+      const photoPreview = document.getElementById('photoPreview');
+      const photoStatus = document.getElementById('photoStatus');
+      const photoButton = document.getElementById('photoButton');
+      const removePhotoButton = document.getElementById('removePhotoButton');
+      const list = document.getElementById('placesList');
+      const hint = document.getElementById('mapHint');
+      let points = loadPoints();
+      let markers = new Map();
+      let pendingLocation = null;
+      let selectedColor = COLORS[0];
+      let selectedId = null;
+      let editingId = null;
+      let photoData = null;
+      let placing = false;
+      let toastTimer;
+
+      function openMaps() {
+        welcomeScreen.hidden = true;
+        mapApp.hidden = false;
+        requestAnimationFrame(() => map.invalidateSize({ pan: false }));
+      }
+
+      document.querySelectorAll('[data-open-maps]').forEach(button => button.addEventListener('click', openMaps));
+      document.getElementById('homeButton').addEventListener('click', () => {
+        mapApp.hidden = true;
+        welcomeScreen.hidden = false;
+      });
+
+      function loadPoints() {
+        try {
+          const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+          return Array.isArray(parsed) ? parsed.filter(point => Number.isFinite(point.lat) && Number.isFinite(point.lng) && typeof point.name === 'string').map(point => ({ ...point, type: POINT_TYPES.includes(point.type) ? point.type : 'poste' })) : [];
+        } catch { return []; }
+      }
+
+      function savePoints(nextPoints = points) {
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(nextPoints));
+          return true;
+        } catch { showToast('No se pudieron guardar los cambios en este dispositivo.'); return false; }
+      }
+
+      function escapeHtml(value) {
+        return String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]);
+      }
+
+      function formatCoords(lat, lng) { return `${lat.toFixed(5)}, ${lng.toFixed(5)}`; }
+      function pointTypeLabel(type) { return POINT_TYPE_LABELS[type] || POINT_TYPE_LABELS.poste; }
+      function googleMapsUrl(lat, lng) { return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${lat},${lng}`)}`; }
+
+      function showToast(message) {
+        const toast = document.getElementById('toast');
+        toast.textContent = message;
+        toast.classList.add('show');
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => toast.classList.remove('show'), 2600);
+      }
+
+      function markerIcon(point, index, active) {
+        const html = `<div class="grid-marker${active ? ' selected' : ''}"><div class="grid-marker-shape" style="background:${point.color}"><span>${index + 1}</span></div></div>`;
+        return L.divIcon({ className: '', html, iconSize: [34, 42], iconAnchor: [17, 36], popupAnchor: [0, -34] });
+      }
+
+      function popupContent(point) {
+        const photo = typeof point.photo === 'string' && point.photo.startsWith('data:image/') ? `<img src="${escapeHtml(point.photo)}" alt="Foto de ${escapeHtml(point.name)}" style="display:block;width:100%;max-height:190px;margin-bottom:9px;border-radius:6px;object-fit:cover">` : '';
+        const note = point.note ? `<p style="margin:8px 0 0;color:#69756d;font-size:12px;line-height:1.5">${escapeHtml(point.note)}</p>` : '';
+        return `<div style="min-width:170px;max-width:250px;padding:3px 1px;font-family:'DM Sans',sans-serif">${photo}<strong style="font-size:13px;color:#1b2926">${escapeHtml(point.name)}</strong><div style="margin-top:4px;color:#59665f;font-size:11px;font-weight:700">${pointTypeLabel(point.type)}</div>${note}<div style="margin-top:8px;color:#849087;font-size:10px">${formatCoords(point.lat, point.lng)}</div><div style="display:flex;gap:12px;margin-top:9px"><a href="${googleMapsUrl(point.lat, point.lng)}" target="_blank" rel="noopener noreferrer" style="color:#245c4a;font-size:11px;font-weight:700;text-decoration:none">Google Maps ↗</a><button type="button" data-edit="${escapeHtml(point.id)}" style="padding:0;border:0;background:none;color:#59665f;font-size:11px;font-weight:700;cursor:pointer">Editar</button><button type="button" data-delete="${escapeHtml(point.id)}" style="padding:0;border:0;background:none;color:#c35d48;font-size:11px;font-weight:700;cursor:pointer">Eliminar</button></div></div>`;
+      }
+
+      function render() {
+        markers.forEach(marker => map.removeLayer(marker));
+        markers = new Map();
+        points.forEach((point, index) => {
+          const marker = L.marker([point.lat, point.lng], { icon: markerIcon(point, index, point.id === selectedId) }).addTo(map);
+          marker.bindPopup(popupContent(point));
+          marker.on('click', () => { selectedId = point.id; renderList(); });
+          marker.on('popupopen', event => {
+            const popup = event.popup.getElement();
+            popup.querySelector('[data-edit]')?.addEventListener('click', () => openPointDialog(point, point));
+            popup.querySelector('[data-delete]')?.addEventListener('click', () => deletePoint(point.id));
+          });
+          markers.set(point.id, marker);
+        });
+        document.getElementById('pointCount').textContent = points.length;
+        document.getElementById('pointPlural').textContent = `${points.length} ${points.length === 1 ? 'lugar' : 'lugares'}`;
+        renderList();
+      }
+
+      function renderList() {
+        if (!points.length) {
+          list.innerHTML = '<div class="empty-state"><div class="empty-icon"><i data-lucide="map-pin-plus" aria-hidden="true"></i></div><div><strong>Tu mapa empieza aquí</strong><p>Añade un punto para guardar un lugar que quieras recordar.</p></div></div>';
+          refreshIcons();
+          return;
+        }
+        list.innerHTML = points.map((point, index) => `
+          <div class="place${point.id === selectedId ? ' active' : ''}" data-id="${escapeHtml(point.id)}" tabindex="0" role="button" aria-label="Ver ${escapeHtml(point.name)} en el mapa">
+            <span class="place-dot" style="background:${point.color}">${index + 1}</span>
+            <span class="place-copy"><span class="place-name">${escapeHtml(point.name)}</span><span class="place-meta">${pointTypeLabel(point.type)} · ${formatCoords(point.lat, point.lng)}${point.note ? ` · ${escapeHtml(point.note)}` : ''}</span></span>
+            <button class="place-edit" type="button" data-edit="${escapeHtml(point.id)}" title="Editar punto" aria-label="Editar ${escapeHtml(point.name)}"><i data-lucide="pencil" aria-hidden="true"></i></button>
+            <button class="place-delete" type="button" data-delete="${escapeHtml(point.id)}" title="Eliminar punto" aria-label="Eliminar ${escapeHtml(point.name)}"><i data-lucide="trash-2" aria-hidden="true"></i></button>
+          </div>`).join('');
+        list.querySelectorAll('.place').forEach(item => {
+          const select = () => selectPoint(item.dataset.id);
+          item.addEventListener('click', event => { if (!event.target.closest('.place-open')) select(); });
+          item.addEventListener('keydown', event => { if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('.place-open')) { event.preventDefault(); select(); } });
+        });
+        list.querySelectorAll('[data-edit]').forEach(button => button.addEventListener('click', event => {
+          event.stopPropagation();
+          const point = points.find(item => item.id === button.dataset.edit);
+          if (point) openPointDialog(point, point);
+        }));
+        list.querySelectorAll('[data-delete]').forEach(button => button.addEventListener('click', event => {
+          event.stopPropagation();
+          deletePoint(button.dataset.delete);
+        }));
+        list.querySelectorAll('.place-open').forEach(button => button.addEventListener('click', event => {
+          event.stopPropagation();
+          const point = points.find(item => item.id === button.dataset.open);
+          if (point) window.open(googleMapsUrl(point.lat, point.lng), '_blank', 'noopener,noreferrer');
+        }));
+        refreshIcons();
+      }
+
+      function selectPoint(id) {
+        const point = points.find(item => item.id === id);
+        if (!point) return;
+        selectedId = id;
+        renderList();
+        points.forEach((item, index) => markers.get(item.id)?.setIcon(markerIcon(item, index, item.id === selectedId)));
+        map.flyTo([point.lat, point.lng], Math.max(map.getZoom(), 12), { duration: .6 });
+        markers.get(id)?.openPopup();
+      }
+
+      function deletePoint(id) {
+        const point = points.find(item => item.id === id);
+        if (!point || !window.confirm(`¿Eliminar "${point.name}" de tu mapa?`)) return;
+        const nextPoints = points.filter(item => item.id !== id);
+        if (!savePoints(nextPoints)) return;
+        points = nextPoints;
+        if (selectedId === id) selectedId = null;
+        render();
+        showToast('Punto eliminado.');
+      }
+
+      function beginPlacement() {
+        placing = true;
+        map.getContainer().style.cursor = 'crosshair';
+        hint.classList.add('visible');
+        document.getElementById('mapStatus').textContent = 'ELIGE UN LUGAR';
+      }
+
+      function endPlacement() {
+        placing = false;
+        map.getContainer().style.cursor = '';
+        hint.classList.remove('visible');
+        document.getElementById('mapStatus').textContent = 'MAPA ACTIVO';
+      }
+
+      function openPointDialog(latlng, point = null) {
+        pendingLocation = latlng;
+        editingId = point?.id || null;
+        photoData = point?.photo || null;
+        selectedColor = point?.color || COLORS[0];
+        document.getElementById('dialogTitle').textContent = point ? 'Editar punto' : 'Nuevo punto';
+        document.getElementById('coordinateLabel').textContent = formatCoords(latlng.lat, latlng.lng);
+        pointName.value = point?.name || '';
+        pointType.value = POINT_TYPES.includes(point?.type) ? point.type : 'poste';
+        pointNote.value = point?.note || '';
+        photoInput.value = '';
+        updatePhotoPreview();
+        document.getElementById('colorOptions').innerHTML = COLORS.map(color => `<button class="color-choice" type="button" style="background:${color}" data-color="${color}" aria-label="Color ${color}" aria-pressed="${color === selectedColor}"></button>`).join('');
+        document.querySelectorAll('.color-choice').forEach(button => button.addEventListener('click', () => {
+          selectedColor = button.dataset.color;
+          document.querySelectorAll('.color-choice').forEach(choice => choice.setAttribute('aria-pressed', String(choice.dataset.color === selectedColor)));
+        }));
+        dialog.showModal();
+        setTimeout(() => pointName.focus(), 50);
+      }
+
+      map.on('click', event => {
+        if (!placing) return;
+        endPlacement();
+        openPointDialog(event.latlng);
+      });
+
+      document.getElementById('addButton').addEventListener('click', beginPlacement);
+      photoButton.addEventListener('click', () => photoInput.click());
+      removePhotoButton.addEventListener('click', () => {
+        photoData = null;
+        updatePhotoPreview();
+      });
+      photoInput.addEventListener('change', async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        if (!file.type.startsWith('image/')) {
+          showToast('Elige un archivo de imagen.');
+          photoInput.value = '';
+          return;
+        }
+        photoButton.disabled = true;
+        photoStatus.textContent = 'Procesando foto...';
+        try {
+          photoData = await compressPhoto(file);
+          updatePhotoPreview();
+        } catch {
+          photoData = null;
+          updatePhotoPreview();
+          showToast('No se pudo procesar la foto. Prueba con otra imagen.');
+        } finally {
+          photoButton.disabled = false;
+          photoInput.value = '';
+        }
+      });
+      document.getElementById('closeDialog').addEventListener('click', () => dialog.close());
+      document.getElementById('cancelDialog').addEventListener('click', () => dialog.close());
+      dialog.addEventListener('click', event => { if (event.target === dialog) dialog.close(); });
+      form.addEventListener('submit', event => {
+        event.preventDefault();
+        if (!pendingLocation) return;
+        const point = { id: editingId || (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`), name: pointName.value.trim(), type: pointType.value, note: pointNote.value.trim(), lat: pendingLocation.lat, lng: pendingLocation.lng, color: selectedColor, photo: photoData || undefined };
+        if (!point.name) return pointName.focus();
+        const editingIndex = points.findIndex(item => item.id === editingId);
+        const nextPoints = [...points];
+        if (editingIndex >= 0) nextPoints[editingIndex] = point;
+        else nextPoints.push(point);
+        if (!savePoints(nextPoints)) return;
+        points = nextPoints;
+        selectedId = point.id;
+        dialog.close();
+        render();
+        map.flyTo([point.lat, point.lng], Math.max(map.getZoom(), 11), { duration: .55 });
+        markers.get(point.id)?.openPopup();
+        showToast(editingIndex >= 0 ? 'Punto actualizado.' : 'Punto guardado en tu mapa.');
+      });
+
+      document.getElementById('searchForm').addEventListener('submit', async event => {
+        event.preventDefault();
+        const query = document.getElementById('searchInput').value.trim();
+        if (!query) return;
+        const button = event.currentTarget.querySelector('button');
+        button.disabled = true;
+        document.getElementById('mapStatus').textContent = 'BUSCANDO...';
+        try {
+          const response = await fetch(`https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(query)}`, { headers: { 'Accept-Language': 'es' } });
+          if (!response.ok) throw new Error('search');
+          const results = await response.json();
+          if (!results.length) { showToast('No encontramos ese lugar. Prueba con otra búsqueda.'); return; }
+          map.flyTo([Number(results[0].lat), Number(results[0].lon)], 13, { duration: .7 });
+          showToast(results[0].display_name.split(',').slice(0, 2).join(', '));
+        } catch { showToast('No se pudo completar la búsqueda. Comprueba tu conexión.'); }
+        finally { button.disabled = false; document.getElementById('mapStatus').textContent = 'MAPA ACTIVO'; }
+      });
+
+      document.getElementById('locateButton').addEventListener('click', () => {
+        if (!navigator.geolocation) { showToast('La ubicación no está disponible en este navegador.'); return; }
+        navigator.geolocation.getCurrentPosition(position => {
+          const location = [position.coords.latitude, position.coords.longitude];
+          map.flyTo(location, 14, { duration: .7 });
+          L.circleMarker(location, { radius: 7, color: '#fff', weight: 3, fillColor: '#438d68', fillOpacity: 1 }).addTo(map).bindPopup('Estás aquí').openPopup();
+        }, () => showToast('No se pudo acceder a tu ubicación. Revisa los permisos del navegador.'), { enableHighAccuracy: true, timeout: 10000 });
+      });
+
+      document.getElementById('googleMapsButton').addEventListener('click', () => {
+        const center = map.getCenter();
+        window.open(googleMapsUrl(center.lat, center.lng), '_blank', 'noopener,noreferrer');
+      });
+
+      document.getElementById('exportButton').addEventListener('click', () => {
+        if (!points.length) { showToast('Añade al menos un punto antes de exportar.'); return; }
+        const geojson = { type: 'FeatureCollection', features: points.map(point => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [point.lng, point.lat] }, properties: { id: point.id, name: point.name, type: point.type, note: point.note, color: point.color } })) };
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(new Blob([JSON.stringify(geojson, null, 2)], { type: 'application/geo+json' }));
+        link.download = 'gridmap-puntos.geojson';
+        link.click();
+        URL.revokeObjectURL(link.href);
+        showToast('Archivo GeoJSON exportado.');
+      });
+
+      document.getElementById('importButton').addEventListener('click', () => document.getElementById('importInput').click());
+      document.getElementById('importInput').addEventListener('change', async event => {
+        const file = event.target.files?.[0];
+        if (!file) return;
+        try {
+          const data = JSON.parse(await file.text());
+          const features = data.type === 'FeatureCollection' ? data.features : data.type === 'Feature' ? [data] : [];
+          const imported = features.filter(feature => feature.geometry?.type === 'Point' && Array.isArray(feature.geometry.coordinates)).map(feature => {
+            const [lng, lat] = feature.geometry.coordinates;
+            const props = feature.properties || {};
+            return { id: `${Date.now()}-${Math.random()}`, name: String(props.name || 'Punto importado').slice(0, 60), type: POINT_TYPES.includes(props.type) ? props.type : 'poste', note: String(props.note || '').slice(0, 300), lat: Number(lat), lng: Number(lng), color: COLORS.includes(props.color) ? props.color : COLORS[0] };
+          }).filter(point => Number.isFinite(point.lat) && Number.isFinite(point.lng) && Math.abs(point.lat) <= 90 && Math.abs(point.lng) <= 180);
+          if (!imported.length) { showToast('El archivo no contiene puntos GeoJSON válidos.'); return; }
+          const nextPoints = [...points, ...imported];
+          if (!savePoints(nextPoints)) return;
+          points = nextPoints;
+          render();
+          map.fitBounds(L.latLngBounds(imported.map(point => [point.lat, point.lng])).pad(.2), { maxZoom: 13 });
+          showToast(`${imported.length} ${imported.length === 1 ? 'punto importado' : 'puntos importados'}.`);
+        } catch { showToast('No se pudo leer el archivo. Usa un GeoJSON válido.'); }
+        finally { event.target.value = ''; }
+      });
+
+      function refreshIcons() { if (window.lucide) lucide.createIcons(); }
+
+      function updatePhotoPreview() {
+        photoPreview.hidden = !photoData;
+        photoPreview.src = photoData || '';
+        photoStatus.textContent = photoData ? 'Foto lista' : 'Sin foto';
+        document.getElementById('photoButtonText').textContent = photoData ? 'Cambiar foto' : 'Tomar foto';
+        removePhotoButton.hidden = !photoData;
+      }
+
+      function compressPhoto(file) {
+        return new Promise((resolve, reject) => {
+          const objectUrl = URL.createObjectURL(file);
+          const image = new Image();
+          image.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            const scale = Math.min(1, 1200 / Math.max(image.naturalWidth, image.naturalHeight));
+            const canvas = document.createElement('canvas');
+            canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
+            canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+            const context = canvas.getContext('2d');
+            if (!context) { reject(new Error('photo-canvas-unavailable')); return; }
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            canvas.toBlob(blob => {
+              if (!blob) { reject(new Error('photo-compression-failed')); return; }
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result);
+              reader.onerror = () => reject(new Error('photo-read-failed'));
+              reader.readAsDataURL(blob);
+            }, 'image/jpeg', .72);
+          };
+          image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('photo-decode-failed'));
+          };
+          image.src = objectUrl;
+        });
+      }
+
+      refreshIcons();
+      render();
+      setTimeout(() => map.invalidateSize(), 100);
+      window.addEventListener('resize', () => map.invalidateSize());
+    })();
+  </script>
+</body>
+</html>
