@@ -361,6 +361,7 @@
 
             async function loadPoints() {
         try {
+          console.log("1. Conectando a Firebase...");
           const querySnapshot = await window.fsGetDocs(window.fsCollection(window.db, "puntos"));
           const loaded = [];
           querySnapshot.forEach((doc) => {
@@ -369,9 +370,10 @@
                loaded.push({ id: doc.id, ...data });
             }
           });
+          console.log("2. Datos recibidos de Firebase:", loaded); // <-- Esto es clave
           return loaded;
         } catch (e) {
-          console.error("Error cargando puntos: ", e);
+          console.error("❌ Error cargando puntos: ", e);
           return [];
         }
       }
@@ -694,8 +696,10 @@
           image.src = objectUrl;
         });
       }
-      (async () => {
+            (async () => {
+        console.log("Iniciando carga...");
         points = await loadPoints();
+        console.log("Dibujando mapa con:", points);
         render();
       })();
 
