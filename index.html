@@ -209,7 +209,7 @@
       </form>
     </div>
   </main>
-  <main class="welcome-screen" id="welcomeScreen">
+   <main class="welcome-screen" id="welcomeScreen" hidden>
     <header class="welcome-header">
       <div class="brand" aria-label="GRIDMAP, inicio">
         <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
@@ -341,23 +341,7 @@
     window.fbSignOut = signOut;
     window.fbOnAuthStateChanged = onAuthStateChanged;
 
-    window.dispatchEvent(new Event('firebaseReady'));
-</script>
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    // Exponemos las funciones
-    window.db = db;
-    window.fsCollection = collection;
-    window.fsGetDocs = getDocs;
-    window.fsAddDoc = addDoc;
-    window.fsUpdateDoc = updateDoc;
-    window.fsDeleteDoc = deleteDoc;
-    window.fsDoc = doc;
-
-    // ¡ESTA ES LA LÍNEA MÁGICA! Avisa que Firebase ya está listo
-    window.dispatchEvent(new Event('firebaseReady'));
-  </script>
+     window.dispatchEvent(new Event('firebaseReady'));
   </script>
   <!-- FIN DEL CÓDIGO DE FIREBASE -->
 
@@ -803,14 +787,9 @@
         });
       }
             // Esperamos a que Firebase avise que está listo para cargar los puntos
-      window.addEventListener('firebaseReady', async () => {
-        console.log("¡Firebase listo! Cargando puntos...");
-        points = await loadPoints();
-        render();
-      });
+  
             // --- LÓGICA DE LOGIN Y SESIÓN ---
       const loginScreen = document.getElementById('loginScreen');
-      const welcomeScreen = document.getElementById('welcomeScreen');
       const loginForm = document.getElementById('loginForm');
       const loginError = document.getElementById('loginError');
       const logoutBtn = document.getElementById('logoutBtn');
